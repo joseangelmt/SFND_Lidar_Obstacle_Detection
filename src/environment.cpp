@@ -50,6 +50,9 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
 	renderPointCloud(viewer, inputCloud, "inputCloud");
 
 	ProcessPointClouds<pcl::PointXYZ> processor;
+	auto segmentCloud = processor.SegmentPlane(inputCloud, 100, 0.2f);
+	renderPointCloud(viewer, segmentCloud.first, "obstCloud", Color(1,0,0));
+	renderPointCloud(viewer, segmentCloud.second, "planeCloud", Color(0,1,0));
 }
 
 
