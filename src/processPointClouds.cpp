@@ -142,6 +142,46 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     return segResult;
 }
 
+#define MY_OWN_CLUSTERIGN_IMPLEMENTATION
+
+#ifdef MY_OWN_CLUSTERIGN_IMPLEMENTATION
+#include "quiz/cluster/kdtree.h"
+
+static void proximity(std::vector<int>& cluster, const std::vector<std::vector<float>>& points, int currentPoint, bool* processed, KdTree<3>* tree, float distanceTol)
+{
+	processed[currentPoint] = true;
+	cluster.push_back(currentPoint);
+
+	auto nearbyPoints = tree->search(points[currentPoint], distanceTol);
+	for (const auto nearbyPoint : nearbyPoints) {
+		if (!processed[nearbyPoint])
+			proximity(cluster, points, nearbyPoint, processed, tree, distanceTol);
+	}
+}
+
+static std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree<3>* tree, float distanceTol)
+{
+	bool* processed = new bool[points.size()];
+	for (int i = 0; i < points.size(); i++)
+		processed[i] = false;
+
+	std::vector<std::vector<int>> clusters;
+
+	for (auto i = 0; i < points.size(); i++) {
+		if (processed[i])
+			continue;
+
+		std::vector<int> cluster;
+		proximity(cluster, points, i, processed, tree, distanceTol);
+		clusters.push_back(cluster);
+	}
+
+	delete[] processed;
+	return clusters;
+}
+
+#endif
+
 template<typename PointT>
 std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::Clustering(typename pcl::PointCloud<PointT>::Ptr cloud, float clusterTolerance, int minSize, int maxSize)
 {
@@ -150,6 +190,36 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 
 	std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
 
+#ifdef MY_OWN_CLUSTERIGN_IMPLEMENTATION
+	KdTree<3> tree;
+
+	std::vector<std::vector<float>> points;
+	for (const auto& point : cloud->points) {
+		std::vector<float> p{ point.x, point.y, point.z };
+		tree.insert(p, points.size());
+		points.push_back(p);
+	}
+
+	auto cluster_indices = euclideanCluster(points, &tree, clusterTolerance);
+
+	for (const auto pointIndices : cluster_indices)
+	{
+		if (pointIndices.size() < minSize)
+			continue;
+		if (pointIndices.size() > maxSize)
+			continue;
+
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZ>);
+		for (auto pit : pointIndices)
+			cloud_cluster->points.push_back(cloud->points[pit]);
+		cloud_cluster->width = cloud_cluster->points.size();
+		cloud_cluster->height = 1;
+		cloud_cluster->is_dense = true;
+
+		clusters.push_back(cloud_cluster);
+	}
+
+#else
 	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
 	tree->setInputCloud(cloud);
 
@@ -173,6 +243,8 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 
 		clusters.push_back(cloud_cluster);
 	}
+#endif
+
 
 	auto endTime = std::chrono::steady_clock::now();
 	auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
