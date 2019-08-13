@@ -19,17 +19,29 @@ struct Node
 
 struct KdTree
 {
-	Node* root;
+	Node* root{ nullptr };
 
-	KdTree()
-	: root(NULL)
-	{}
+	KdTree() = default;
 
-	void insert(std::vector<float> point, int id)
+	void insert(const std::vector<float> point, int id)
 	{
-		// TODO: Fill in this function to insert a new point into the tree
-		// the function should create a new node and place correctly with in the root 
+		insert(root, point, id);
+	}
 
+	void insert(Node*& node, const std::vector<float> point, int id, unsigned int depth = 0)
+	{
+		if (node == nullptr)
+		{
+			node = new Node{ point, id };
+		}
+		else {
+			const auto cd{ depth % 2 };
+
+			if (point[cd] < node->point[cd])
+				insert(node->left, point, id, depth + 1);
+			else
+				insert(node->right, point, id, depth + 1);
+		}
 	}
 
 	// return a list of point ids in the tree that are within distance of target
