@@ -9,33 +9,35 @@ struct Node
 {
 	std::vector<float> point;
 	int id;
-	Node* left;
-	Node* right;
+	Node* left{ nullptr };
+	Node* right{ nullptr };
 
 	Node(std::vector<float> arr, int setId)
-	:	point(arr), id(setId), left(NULL), right(NULL)
+		: point(arr)
+		, id(setId)
 	{}
 };
 
+template<int Dimension>
 struct KdTree
 {
 	Node* root{ nullptr };
 
 	KdTree() = default;
 
-	void insert(const std::vector<float> point, int id)
+	void insert(const std::vector<float>& point, int id)
 	{
 		insert(root, point, id);
 	}
 
-	void insert(Node*& node, const std::vector<float> point, int id, unsigned int depth = 0)
+	void insert(Node*& node, const std::vector<float>& point, int id, unsigned int depth = 0)
 	{
 		if (node == nullptr)
 		{
 			node = new Node{ point, id };
 		}
 		else {
-			const auto cd{ depth % 2 };
+			const auto cd{ depth % Dimension };
 
 			if (point[cd] < node->point[cd])
 				insert(node->left, point, id, depth + 1);
@@ -57,20 +59,22 @@ struct KdTree
 		if (node == nullptr)
 			return;
 
-		if (node->point[0] >= target[0] - distanceTol &&
-			node->point[0] <= target[0] + distanceTol &&
-			node->point[1] >= target[1] - distanceTol &&
-			node->point[1] <= target[1] + distanceTol) {
+		bool sw = true;
+		for (auto i = 0; sw && i < Dimension; i++) {
+			if (node->point[0] < target[0] - distanceTol || node->point[0] > target[0] + distanceTol)
+				sw = false;
+		}
 
+		if (sw) {
 			auto d{ 0.0 };
-			for (int i = 0; i < target.size(); i++)
+			for (int i = 0; i < Dimension; i++)
 				d += pow(target[i] - node->point[i], 2.0);
 
 			if (sqrt(d) <= distanceTol)
 				ids.push_back(node->id);
 		}
 
-		const auto cd{ depth % 2 };
+		const auto cd{ depth % Dimension };
 
 		if (target[cd] - distanceTol < node->point[cd])
 			search(node->left, target, distanceTol, depth + 1, ids);
@@ -79,7 +83,3 @@ struct KdTree
 			search(node->right, target, distanceTol, depth + 1, ids);
 	}
 };
-
-
-
-

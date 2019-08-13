@@ -74,7 +74,7 @@ void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Bo
 
 }
 
-void proximity(std::vector<int>& cluster, const std::vector<std::vector<float>>& points, int currentPoint, bool* processed, KdTree* tree, float distanceTol)
+void proximity(std::vector<int>& cluster, const std::vector<std::vector<float>>& points, int currentPoint, bool* processed, KdTree<2>* tree, float distanceTol)
 {
 	processed[currentPoint] = true;
 	cluster.push_back(currentPoint);
@@ -86,7 +86,7 @@ void proximity(std::vector<int>& cluster, const std::vector<std::vector<float>>&
 	}
 }
 
-std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree* tree, float distanceTol)
+std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree<2>* tree, float distanceTol)
 {
 	bool* processed = new bool[points.size()];
 	for (int i = 0; i < points.size(); i++)
@@ -124,13 +124,13 @@ int main ()
 	std::vector<std::vector<float>> points = { {-6.2,7}, {-6.3,8.4}, {-5.2,7.1}, {-5.7,6.3}, {7.2,6.1}, {8.0,5.3}, {7.2,7.1}, {0.2,-7.1}, {1.7,-6.9}, {-1.2,-7.2}, {2.2,-8.9} };
 	//std::vector<std::vector<float>> points = { {-6.2,7}, {-6.3,8.4}, {-5.2,7.1}, {-5.7,6.3} };
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = CreateData(points);
-
-	KdTree* tree = new KdTree;
+	
+	auto tree{ new KdTree<2> };
   
-    for (int i=0; i<points.size(); i++) 
+    for (auto i=0; i<points.size(); i++) 
     	tree->insert(points[i],i); 
 
-  	int it = 0;
+	auto it{ 0 };
   	render2DTree(tree->root,viewer,window, it);
   
   	std::cout << "Test Search" << std::endl;
@@ -138,6 +138,7 @@ int main ()
   	for(int index : nearby)
       std::cout << index << ",";
   	std::cout << std::endl;
+
 
   	// Time segmentation process
   	auto startTime = std::chrono::steady_clock::now();
