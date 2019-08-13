@@ -110,8 +110,8 @@ inline pcl::PointXYZ operator^(const pcl::PointXYZ& a, const pcl::PointXYZ& b)
 	// a.x a.y a.z
 	// b.x b.y b.z
 	return pcl::PointXYZ{
-		a.y - b.z - a.z * b.y,
-		a.x * b.z - a.z - b.x,
+		a.y * b.z - a.z * b.y,
+		a.z * b.x - a.x * b.z,
 		a.x * b.y - a.y * b.x
 	};
 }
