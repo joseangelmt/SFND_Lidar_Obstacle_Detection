@@ -47,7 +47,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData()
 pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData3D()
 {
 	ProcessPointClouds<pcl::PointXYZ> pointProcessor;
-	return pointProcessor.loadPcd("../../../sensors/data/pcd/simpleHighway.pcd");
+	return pointProcessor.loadPcd("../../../../../sensors/data/pcd/simpleHighway.pcd");
 }
 
 
@@ -61,7 +61,7 @@ pcl::visualization::PCLVisualizer::Ptr initScene()
   	return viewer;
 }
 
-std::unordered_set<int> Ransac(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol)
+std::unordered_set<int> RansacLine(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol)
 {
 	std::unordered_set<int> inliersResult;
 	srand(time(NULL));
@@ -99,6 +99,70 @@ std::unordered_set<int> Ransac(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int ma
 	return inliersResult;
 }
 
+inline pcl::PointXYZ operator-(const pcl::PointXYZ& a, const pcl::PointXYZ& b)
+{
+	return pcl::PointXYZ{ a.x - b.x, a.y - b.y, a.z - b.z };
+}
+
+inline pcl::PointXYZ operator^(const pcl::PointXYZ& a, const pcl::PointXYZ& b)
+{
+	//  i   j   k
+	// a.x a.y a.z
+	// b.x b.y b.z
+	return pcl::PointXYZ{
+		a.y - b.z - a.z * b.y,
+		a.x * b.z - a.z - b.x,
+		a.x * b.y - a.y * b.x
+	};
+}
+inline float operator*(const pcl::PointXYZ& a, const pcl::PointXYZ& b)
+{
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+std::unordered_set<int> RansacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol)
+{
+	std::unordered_set<int> inliersResult;
+	srand(time(NULL));
+
+	while (maxIterations--) {
+		std::unordered_set<int> inliers;
+		while (inliers.size() < 3)
+			inliers.insert(rand() % cloud->points.size());
+
+		auto iterator = inliers.begin();
+		const auto& point1{ cloud->points[*iterator++] };
+		const auto& point2{ cloud->points[*iterator++] };
+		const auto& point3{ cloud->points[*iterator] };
+
+		const auto v1{ point2 - point1 };
+		const auto v2{ point3 - point1 };
+		const auto cross{ v1 ^ v2 };
+
+		const auto A{ cross.x };
+		const auto B{ cross.y };
+		const auto C{ cross.z };
+		const auto D{ cross * point1 };
+
+		const auto denominator{ sqrt(A * A + B * B + C * C) };
+
+		for (int i = 0; i < cloud->points.size(); i++) {
+			if (inliers.count(i))
+				continue;
+
+			const auto& point{ cloud->points[i] };
+
+			const auto d{ fabs(point.x * A + point.y * B + point.z * C + D) / denominator };
+			if (d < distanceTol)
+				inliers.insert(i);
+		}
+
+		if (inliers.size() > inliersResult.size())
+			inliersResult = inliers;
+	}
+
+	return inliersResult;
+}
 int main ()
 {
 
@@ -106,10 +170,10 @@ int main ()
 	pcl::visualization::PCLVisualizer::Ptr viewer = initScene();
 
 	// Create data
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = CreateData();
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = CreateData3D();
 	
 
-	std::unordered_set<int> inliers = Ransac(cloud, 50, 0.5);
+	std::unordered_set<int> inliers = RansacPlane(cloud, 50, 0.5);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr  cloudInliers(new pcl::PointCloud<pcl::PointXYZ>());
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOutliers(new pcl::PointCloud<pcl::PointXYZ>());
