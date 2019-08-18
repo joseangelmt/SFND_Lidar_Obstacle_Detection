@@ -77,7 +77,7 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 	for (auto index : inliers->indices)
 		road->points.push_back(cloud->points[index]);
 
-	pcl::ExtractIndices<pcl::PointXYZ> extract;
+	pcl::ExtractIndices<PointT> extract;
 	extract.setInputCloud(cloud);
 	extract.setIndices(inliers);
 	extract.setNegative(true);
@@ -94,21 +94,20 @@ inline pcl::PointXYZ operator-(const pcl::PointXYZ& a, const pcl::PointXYZ& b)
 
 inline pcl::PointXYZ operator^(const pcl::PointXYZ& a, const pcl::PointXYZ& b)
 {
-	//  i   j   k
-	// a.x a.y a.z
-	// b.x b.y b.z
 	return pcl::PointXYZ{
 		a.y * b.z - a.z * b.y,
 		a.z * b.x - a.x * b.z,
 		a.x * b.y - a.y * b.x
 	};
 }
+
 inline float operator*(const pcl::PointXYZ& a, const pcl::PointXYZ& b)
 {
 	return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-static pcl::PointIndices::Ptr RansacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol)
+template<typename CloudType>
+static pcl::PointIndices::Ptr RansacPlane(const CloudType& cloud, int maxIterations, float distanceTol)
 {
 	std::unordered_set<int> inliersResult;
 	srand(time(NULL));
@@ -119,9 +118,9 @@ static pcl::PointIndices::Ptr RansacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr cl
 			inliers.insert(rand() % cloud->points.size());
 
 		auto iterator = inliers.begin();
-		const auto& point1{ cloud->points[*iterator++] };
-		const auto& point2{ cloud->points[*iterator++] };
-		const auto& point3{ cloud->points[*iterator] };
+		pcl::PointXYZ point1{ cloud->points[*iterator].x, cloud->points[*iterator].y, cloud->points[*iterator++].z };
+		pcl::PointXYZ point2{ cloud->points[*iterator].x, cloud->points[*iterator].y, cloud->points[*iterator++].z };
+		pcl::PointXYZ point3{ cloud->points[*iterator].x, cloud->points[*iterator].y, cloud->points[*iterator].z };
 
 		const auto v1{ point2 - point1 };
 		const auto v2{ point3 - point1 };
