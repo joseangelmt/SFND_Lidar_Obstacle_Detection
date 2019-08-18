@@ -142,12 +142,24 @@ int main (int argc, char** argv)
     initCamera(setAngle, viewer);
 
 	ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
-	pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = pointProcessorI->loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
+	std::vector<boost::filesystem::path> stream = pointProcessorI->streamPcd("../src/sensors/data/pcd/data_1");
 
-	cityBlock(viewer, pointProcessorI, inputCloud);
+	auto streamIterator = stream.begin();
+	pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloudI;
 
     while (!viewer->wasStopped ())
     {
-        viewer->spinOnce ();
+		viewer->removeAllPointClouds();
+		viewer->removeAllShapes();
+
+		// Load pcd and run obstacle detection process
+		inputCloudI = pointProcessorI->loadPcd((*streamIterator).string());
+		cityBlock(viewer, pointProcessorI, inputCloudI);
+
+		streamIterator++;
+		if (streamIterator == stream.end())
+			streamIterator = stream.begin();
+
+		viewer->spinOnce();
     } 
 }
