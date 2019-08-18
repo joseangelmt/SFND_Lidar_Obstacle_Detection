@@ -69,15 +69,11 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
 	}
 }
 
-void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer)
+void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, ProcessPointClouds<pcl::PointXYZI>* pointProcessorI, const pcl::PointCloud<pcl::PointXYZI>::Ptr& inputCloud)
 {
 	// ----------------------------------------------------
 	// -----Open 3D viewer and display City Block     -----
 	// ----------------------------------------------------
-
-	ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
-	pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = pointProcessorI->loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
-
 	auto filterCloud = pointProcessorI->FilterCloud(inputCloud, 0.2f , Eigen::Vector4f(-10 , -6 , -3 , 1), Eigen::Vector4f(30 , 6, 5 , 1));
 
 	auto segmentCloud = pointProcessorI->SegmentPlane(filterCloud, 100, 0.3f);
@@ -144,8 +140,11 @@ int main (int argc, char** argv)
     pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
     CameraAngle setAngle = XY;
     initCamera(setAngle, viewer);
-    //simpleHighway(viewer);
-	cityBlock(viewer);
+
+	ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
+	pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = pointProcessorI->loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
+
+	cityBlock(viewer, pointProcessorI, inputCloud);
 
     while (!viewer->wasStopped ())
     {
