@@ -130,7 +130,7 @@ static pcl::PointIndices::Ptr RansacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr cl
 		const auto A{ cross.x };
 		const auto B{ cross.y };
 		const auto C{ cross.z };
-		const auto D{ cross * point1 };
+		const auto D{ -(cross * point1) };
 
 		const auto denominator{ sqrt(A * A + B * B + C * C) };
 
