@@ -61,7 +61,7 @@ struct KdTree
 
 		bool sw = true;
 		for (auto i = 0; sw && i < Dimension; i++) {
-			if (node->point[0] < target[0] - distanceTol || node->point[0] > target[0] + distanceTol)
+			if (node->point[i] < target[i] - distanceTol || node->point[i] > target[i] + distanceTol)
 				sw = false;
 		}
 
