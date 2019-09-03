@@ -42,22 +42,22 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
 	region.setInputCloud(cloudFiltered);
 	region.filter(*cloudRegion);
 
-	std::vector<int> indices;
+	//std::vector<int> indices;
 
-	pcl::CropBox<PointT> roof(true);
-	roof.setMin(Eigen::Vector4f(-1.5, -1.7, -1, 1));
-	roof.setMax(Eigen::Vector4f(2.6, 1.7, -0.4, 1));
-	roof.setInputCloud(cloudRegion);
-	roof.filter(indices);
+	//pcl::CropBox<PointT> roof(true);
+	//roof.setMin(Eigen::Vector4f(-1.5, -1.7, -1, 1));
+	//roof.setMax(Eigen::Vector4f(2.6, 1.7, -0.4, 1));
+	//roof.setInputCloud(cloudRegion);
+	//roof.filter(indices);
 
-	pcl::PointIndices::Ptr inliers{ new pcl::PointIndices };
-	inliers->indices = indices;
+	//pcl::PointIndices::Ptr inliers{ new pcl::PointIndices };
+	//inliers->indices = indices;
 
-	pcl::ExtractIndices<PointT> extract;
-	extract.setInputCloud(cloudRegion);
-	extract.setIndices(inliers);
-	extract.setNegative(true);
-	extract.filter(*cloudRegion);
+	//pcl::ExtractIndices<PointT> extract;
+	//extract.setInputCloud(cloudRegion);
+	//extract.setIndices(inliers);
+	//extract.setNegative(true);
+	//extract.filter(*cloudRegion);
 
 
     auto endTime = std::chrono::steady_clock::now();
@@ -87,6 +87,9 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 	return segResult;
 }
 
+#define MY_OWN_SEGMENTATION_IMPLEMENTATION
+
+#ifdef MY_OWN_SEGMENTATION_IMPLEMENTATION
 inline pcl::PointXYZ operator-(const pcl::PointXYZ& a, const pcl::PointXYZ& b)
 {
 	return pcl::PointXYZ{ a.x - b.x, a.y - b.y, a.z - b.z };
@@ -153,6 +156,7 @@ static pcl::PointIndices::Ptr RansacPlane(const CloudType& cloud, int maxIterati
 		result->indices.push_back(inlier);
 	return result;
 }
+#endif
 
 template<typename PointT>
 std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::SegmentPlane(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceThreshold)
@@ -160,7 +164,28 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     // Time segmentation process
     auto startTime = std::chrono::steady_clock::now();
 
+#ifdef MY_OWN_SEGMENTATION_IMPLEMENTATION
 	auto inliers = RansacPlane(cloud, maxIterations, distanceThreshold);
+#else
+	pcl::PointIndices::Ptr inliers{ new pcl::PointIndices() };
+	pcl::ModelCoefficients::Ptr coefficients{ new pcl::ModelCoefficients() };
+
+	// Create the segmentation object
+	pcl::SACSegmentation<PointT> seg;
+	seg.setOptimizeCoefficients(true);
+	seg.setModelType(pcl::SACMODEL_PLANE);
+	seg.setMethodType(pcl::SAC_RANSAC);
+	seg.setMaxIterations(maxIterations);
+	seg.setDistanceThreshold(distanceThreshold);
+
+	seg.setInputCloud(cloud);
+	seg.segment(*inliers, *coefficients);
+#endif
+
+	if (inliers->indices.size() == 0)
+	{
+		std::cerr << "Could not estimate a planar model for the given dataset." << std::endl;
+	}
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
@@ -237,7 +262,7 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 		if (pointIndices.size() > maxSize)
 			continue;
 
-		pcl::PointCloud<PointT>::Ptr cloud_cluster(new pcl::PointCloud<PointT>);
+		typename pcl::PointCloud<PointT>::Ptr cloud_cluster(new pcl::PointCloud<PointT>);
 		for (auto pit : pointIndices)
 			cloud_cluster->points.push_back(cloud->points[pit]);
 		cloud_cluster->width = cloud_cluster->points.size();
@@ -248,7 +273,7 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 	}
 
 #else
-	pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
+	typename pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
 	tree->setInputCloud(cloud);
 
 	std::vector<pcl::PointIndices> cluster_indices;
@@ -262,7 +287,7 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 
 	for (const auto pointIndices : cluster_indices)
 	{
-		pcl::PointCloud<PointT>::Ptr cloud_cluster(new pcl::PointCloud<PointT>);
+		typename pcl::PointCloud<PointT>::Ptr cloud_cluster(new pcl::PointCloud<PointT>);
 		for (auto pit : pointIndices.indices)
 			cloud_cluster->points.push_back(cloud->points[pit]);
 		cloud_cluster->width = cloud_cluster->points.size();

@@ -74,22 +74,11 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, ProcessPointCloud
 	// ----------------------------------------------------
 	// -----Open 3D viewer and display City Block     -----
 	// ----------------------------------------------------
-	auto filterCloud = pointProcessorI->FilterCloud(inputCloud, 0.2f , Eigen::Vector4f(-10 , -6 , -3 , 1), Eigen::Vector4f(30 , 6, 5 , 1));
-
-	auto segmentCloud = pointProcessorI->SegmentPlane(filterCloud, 100, 0.3f);
-
-	Box box;
-	box.x_min = -1.5f;
-	box.y_min = -1.7f;
-	box.z_min = -1.0f;
-	box.x_max = 2.6f;
-	box.y_max = 1.7f;
-	box.z_max = -0.4f;
-	renderBox(viewer, box, 0, Color(0.5f, 0.0f, 1.0f));
+	auto filterCloud = pointProcessorI->FilterCloud(inputCloud, 0.3f , Eigen::Vector4f(-10 , -5 , -2 , 1), Eigen::Vector4f(30, 8, 1, 1));
+	auto segmentCloud = pointProcessorI->SegmentPlane(filterCloud, 25, 0.3f);
+	auto cloudClusters = pointProcessorI->Clustering(segmentCloud.first, 0.53f, 10, 500);
 
 	renderPointCloud(viewer, segmentCloud.second, "planeCloud", Color(0, 1, 0));
-
-	auto cloudClusters = pointProcessorI->Clustering(segmentCloud.first, 0.35f, 3, 300);
 
 	auto clusterId = 0;
 	std::vector<Color> colors = { Color(1,0,0), Color(1,1,0), Color(0,0,1) };
@@ -99,11 +88,12 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, ProcessPointCloud
 		std::cout << "cluster size ";
 		pointProcessorI->numPoints(cluster);
 
-		renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(clusterId), colors[clusterId % 3]);
-		++clusterId;
+		renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(clusterId), colors[clusterId % colors.size()]);
 
 		auto box = pointProcessorI->BoundingBox(cluster);
 		renderBox(viewer, box, clusterId);
+
+		++clusterId;
 	}
 
 }
@@ -138,11 +128,11 @@ int main (int argc, char** argv)
     std::cout << "starting enviroment" << std::endl;
 
     pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
-    CameraAngle setAngle = XY;
+    CameraAngle setAngle = FPS;
     initCamera(setAngle, viewer);
 
 	ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
-	std::vector<boost::filesystem::path> stream = pointProcessorI->streamPcd("../src/sensors/data/pcd/data_1");
+	std::vector<boost::filesystem::path> stream = pointProcessorI->streamPcd("../src/sensors/data/pcd/data_2");
 
 	auto streamIterator = stream.begin();
 	pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloudI;
